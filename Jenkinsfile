@@ -1,27 +1,39 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_IMAGE = "flask-app" // Local image name
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: 'main', url: 'https://github.com/jefrya123/Dev_Containers.git'
             }
         }
-
-        stage('Build Image') {
+        stage('Build Docker Image') {
             steps {
-                sh 'docker build -t my-flask-app:latest .'
+                script {
+                    docker.build("${DOCKER_IMAGE}:${env.BUILD_NUMBER}")
+                }
             }
         }
-
-        stage('Run Container') {
+        stage('Deploy') {
             steps {
-                // Stop/remove an old container if it's already running
-                sh 'docker rm -f my-flask-app || true'
-                
-                // Run container in detached mode (-d) on port 5000
-                sh 'docker run -d --name my-flask-app -p 5000:5000 my-flask-app:latest'
+                script {
+                    sh """
+                    docker stop flask-app || true
+                    docker rm flask-app || true
+                    docker run -d --name flask-app -p 80:5000 ${DOCKER_IMAGE}:${env.BUILD_NUMBER}
+                    """
+                }
             }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
         }
     }
 }
