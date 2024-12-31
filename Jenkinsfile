@@ -4,44 +4,23 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Jenkins automatically checks out from SCM if using "Pipeline script from SCM",
-                // but we can explicitly do it here as well:
                 checkout scm
             }
         }
 
-        stage('Build') {
+        stage('Build Image') {
             steps {
-                echo "Building the Flask app..."
-                // e.g. sh 'pip install -r requirements.txt'
+                sh 'docker build -t my-flask-app:latest .'
             }
         }
 
-        stage('Test') {
+        stage('Run Container') {
             steps {
-                echo "Running tests..."
-                // e.g. sh 'pytest --maxfail=1 --disable-warnings -q'
-            }
-        }
-
-        stage('Docker Build') {
-            steps {
-                echo "Building Docker image..."
-                // e.g. sh 'docker build -t your-image-name:latest .'
-            }
-        }
-
-        stage('Docker Push') {
-            when {
-                // We only push if needed. Example: only push on the 'main' branch.
-                // Or you can always evaluate to false until you're ready to push.
-                expression {
-                    return false
-                }
-            }
-            steps {
-                echo "Pushing Docker image..."
-                // e.g. sh 'docker push your-image-name:latest'
+                // Stop/remove an old container if it's already running
+                sh 'docker rm -f my-flask-app || true'
+                
+                // Run container in detached mode (-d) on port 5000
+                sh 'docker run -d --name my-flask-app -p 5000:5000 my-flask-app:latest'
             }
         }
     }
